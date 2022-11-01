@@ -34,7 +34,6 @@ void Display()
 	gluLookAt(r * sin(theta * 3.14159 / 180) * sin(phi * 3.14159 / 180), r * cos(theta * 3.14159 / 180), r * sin(theta * 3.14159 / 180) * cos(phi * 3.14159 / 180), 0, 0, 0, 0, 1, 0);
 	//cout << "TOP: " << faces->id << endl;
 	Face* t = faces;
-	int i = 0;
 	double increment = 0.1;
 	double r = 0.0;
 	while (t != NULL) {
@@ -103,9 +102,7 @@ void Display()
 		gluDeleteTess(tess);
 		
 		t = t->next;
-		i++;
-		/*if (i == 4)break;*/
-		cout << "in for" << endl;
+		
 	}
 	
 	glutSwapBuffers();
@@ -167,106 +164,213 @@ void TestEuler() {
 	EulerOperator op;
 	double arr[3];
 	vector<Face*>deleteFace;
+	// 用户输入底面 中每一个环中所有点的位置
+	bool flag = true;
+	Vertex* startvertex = new Vertex(0, 0, 0);
+	Vertex* firstvertex = new Vertex(0, 0, 0);
 	while (1) {
-		//if (solid!= NULL) {
-
-		//	Face* now = solid->faces;
-		//	cout << "现在有" << now->inum << "个内环" << endl;
-		//	/*if (now->inner_lp) {
-		//		Loop* lp = now->inner_lp;
-		//		cout << now->id << ' ' << lp->id << "id" << endl;
-		//		
-		//	}*/
-		//}
-		cout << "请输入欧拉操作及对应的参数:" << endl;
-		string str; cin >> str;
-		if (str == "sweep") {
-			for (int i = 0; i < 3; i++)cin >> arr[i];//扫掠的方向
-			//for (int i = 0; i < 3; i++)arr[i] /= 2;
-			double dist = 1;//延扫掠方向扫掠的距离
+		cout << "请输入" << (flag ? "外": "内") << "环中点的个数，以及所有点的位置坐标。" << endl;
+		int n; cin >> n;
+		if (n == 0) { //底面构造完成，输入扫掠方向和扫掠长度
+			cout << "请输入扫掠轴的方向以及扫掠长度" << endl;
+			double dist;
+			for (int i = 0; i < 3; i++)cin >> arr[i];
 			cin >> dist;
-			
 			op.sweep(arr, dist);
-			//调用kfmrh，完成模型的构造
 			for (auto deleteface : deleteFace) {
 				op.kfmrh(solid->faces,deleteface);
-
 			}
-			//if (solid != NULL) {
-
-			//	Face* now = solid->faces;
-			//	cout << "现在有" << now->inum << "个内环" << endl;
-			//	/*if (now->inner_lp) {
-			//		Loop* lp = now->inner_lp;
-			//		cout << now->id << ' ' << lp->id << "id" << endl;
-
-			//	}*/
-			//}
 			break;
 		}
-		else if (str == "mvfs") {
-			for (int i = 0; i < 3; i++)cin >> arr[i]; //输入初始顶点的位置
-			for (int i = 0; i < 3; i++)arr[i] /= 2;
-			Vertex* start;
-			solid = op.mvfs(arr, start);
+		Vertex* now = new Vertex(0,0,0);
+		if (flag) { //外环
+			for (int i = 0; i < n; i++) {
+				for (int j = 0; j < 3; j++) {
+					cin >> arr[j];
+				}
+				if (i == 0) {
+					solid = op.mvfs(arr, startvertex);
+					now = startvertex;
+				}
+				else {
+					HalfEdge *he = op.mev(now, arr, solid->faces->out_lp);
+					now = he->endVertex;
+				}
+			}
+			op.mef(now, startvertex, solid->faces->out_lp, true);
+
+			flag = false;
 		}
-		else if (str == "mev") {
-			int u; cin >> u;//旧顶点的编号
-			for (int i = 0; i < 3; i++)cin >> arr[i]; //新顶点的位置，与给定顶点进行相连，形成一条边
-			for (int i = 0; i < 3; i++)arr[i] /= 2;
-			Vertex* start = new Vertex(0,0,0);
-			vector<Vertex*>vec = op.getVertex_list();
-			for (auto x : vec) {
-				if (x->id == u) {
-					start = x;
-					break;
+		else { //内环
+			for (int i = 0; i < n; i++) {
+				for (int j = 0; j < 3; j++) {
+					cin >> arr[j];
 				}
-			}
-			//cout << "end";
-			op.mev(start, arr, solid->faces->out_lp);
-		}
-		else if (str == "mef") { //连接两个编号为u和v的顶点,flag代表新生成的面参不参与扫掠操作？？
-			Vertex* start = new Vertex(0, 0, 0), * end = new Vertex(0, 0, 0);
-			int u, v, flag; cin >> u >> v >> flag;
-			vector<Vertex*>vec = op.getVertex_list();
-			for (auto x : vec) {
-				if (x->id == u) {
-					start = x;
-					break;
+				if (i == 0) {
+					//cout << startvertex->id << "!!" << endl;
+					HalfEdge* he = op.mev(startvertex, arr, solid->faces->out_lp);
+					now = he->endVertex;
+					firstvertex = now;
 				}
-			}
-			for (auto x : vec) {
-				if (x->id == v) {
-					end = x;
-					break;
+				else {
+					HalfEdge* he = op.mev(now, arr, solid->faces->out_lp);
+					now = he->endVertex;
 				}
+
 			}
-			op.mef(start, end, solid->faces->out_lp, flag);
-		}
-		else if (str == "kemr") { //删除给定两个顶点相连的边，构造一个内环
-			int u, v; cin >> u >> v;
-			vector<Vertex*>vec = op.getVertex_list();
-			Vertex* start = new Vertex(0, 0, 0), * end = new Vertex(0, 0, 0);
-			for (auto x : vec) {
-				if (x->id == u) {
-					start = x;
-					break;
-				}
-			}
-			for (auto x : vec) {
-				if (x->id == v) {
-					end = x;
-					break;
-				}
-			}
-			op.kemr(start, end, solid->faces->out_lp);
-			Face* deleteface = solid->faces->next;
+			Face* deleteface = op.mef(now, firstvertex, solid->faces->out_lp, false);
+			//cout << startvertex->id << ' ' << firstvertex->id << endl;
+			op.kemr(startvertex, firstvertex, solid->faces->out_lp);
+
+			// 存储多余的面，待扫掠操作完成后进行kfmrh操作来完成模型的构建
+			/*Face* deleteface = solid->faces->next;
 			while (deleteface->next != NULL) {
 				deleteface = deleteface->next;
-			}
+			}*/
 			deleteFace.push_back(deleteface);
 		}
 	}
+/*
+3
+-0.5 -0.5 0
+0.5 -0.5 0
+0 0.5 0
+
+3
+-0.25 -0.25 0
+0.25 -0.25 0
+0 0.25 0
+
+0
+0 0 -1 0.5
+
+//home model -- 5 edges of outloop,4 holes in it
+5
+-1 -1 0
+1 -1 0
+1 0 0
+0 1 0
+-1 0 0
+4
+-0.75 -0.75 0
+-0.25 -0.75 0
+-0.25 -0.25 0
+-0.75 -0.25 0
+4
+0.25 -0.75 0
+0.75 -0.75 0
+0.75 -0.25 0
+0.25 -0.25 0
+3
+-0.75 0.2 0
+-0.25 0.2 0
+-0.25 0.7 0
+3
+0.25 0.2 0
+0.75 0.2 0
+0.25 0.7 0
+0
+0 0 -1 0.5
+*/
+	//while (1) {
+	//	//if (solid!= NULL) {
+
+	//	//	Face* now = solid->faces;
+	//	//	cout << "现在有" << now->inum << "个内环" << endl;
+	//	//	/*if (now->inner_lp) {
+	//	//		Loop* lp = now->inner_lp;
+	//	//		cout << now->id << ' ' << lp->id << "id" << endl;
+	//	//		
+	//	//	}*/
+	//	//}
+	//	cout << "请输入欧拉操作及对应的参数:" << endl;
+	//	string str; cin >> str;
+	//	if (str == "sweep") {
+	//		for (int i = 0; i < 3; i++)cin >> arr[i];//扫掠的方向
+	//		//for (int i = 0; i < 3; i++)arr[i] /= 2;
+	//		double dist = 1;//延扫掠方向扫掠的距离
+	//		cin >> dist;
+	//		
+	//		op.sweep(arr, dist);
+	//		//调用kfmrh，完成模型的构造
+	//		for (auto deleteface : deleteFace) {
+	//			op.kfmrh(solid->faces,deleteface);
+	//		}
+	//		//if (solid != NULL) {
+
+	//		//	Face* now = solid->faces;
+	//		//	cout << "现在有" << now->inum << "个内环" << endl;
+	//		//	/*if (now->inner_lp) {
+	//		//		Loop* lp = now->inner_lp;
+	//		//		cout << now->id << ' ' << lp->id << "id" << endl;
+
+	//		//	}*/
+	//		//}
+	//		break;
+	//	}
+	//	else if (str == "mvfs") {
+	//		for (int i = 0; i < 3; i++)cin >> arr[i]; //输入初始顶点的位置
+	//		for (int i = 0; i < 3; i++)arr[i] /= 2;
+	//		Vertex* start;
+	//		solid = op.mvfs(arr, start);
+	//	}
+	//	else if (str == "mev") {
+	//		int u; cin >> u;//旧顶点的编号
+	//		for (int i = 0; i < 3; i++)cin >> arr[i]; //新顶点的位置，与给定顶点进行相连，形成一条边
+	//		for (int i = 0; i < 3; i++)arr[i] /= 2;
+	//		Vertex* start = new Vertex(0,0,0);
+	//		vector<Vertex*>vec = op.getVertex_list();
+	//		for (auto x : vec) {
+	//			if (x->id == u) {
+	//				start = x;
+	//				break;
+	//			}
+	//		}
+	//		//cout << "end";
+	//		op.mev(start, arr, solid->faces->out_lp);
+	//	}
+	//	else if (str == "mef") { //连接两个编号为u和v的顶点,flag代表新生成的面参不参与扫掠操作？？
+	//		Vertex* start = new Vertex(0, 0, 0), * end = new Vertex(0, 0, 0);
+	//		int u, v, flag; cin >> u >> v >> flag;
+	//		vector<Vertex*>vec = op.getVertex_list();
+	//		for (auto x : vec) {
+	//			if (x->id == u) {
+	//				start = x;
+	//				break;
+	//			}
+	//		}
+	//		for (auto x : vec) {
+	//			if (x->id == v) {
+	//				end = x;
+	//				break;
+	//			}
+	//		}
+	//		op.mef(start, end, solid->faces->out_lp, flag);
+	//	}
+	//	else if (str == "kemr") { //删除给定两个顶点相连的边，构造一个内环
+	//		int u, v; cin >> u >> v;
+	//		vector<Vertex*>vec = op.getVertex_list();
+	//		Vertex* start = new Vertex(0, 0, 0), * end = new Vertex(0, 0, 0);
+	//		for (auto x : vec) {
+	//			if (x->id == u) {
+	//				start = x;
+	//				break;
+	//			}
+	//		}
+	//		for (auto x : vec) {
+	//			if (x->id == v) {
+	//				end = x;
+	//				break;
+	//			}
+	//		}
+	//		op.kemr(start, end, solid->faces->out_lp);
+	//		Face* deleteface = solid->faces->next;
+	//		while (deleteface->next != NULL) {
+	//			deleteface = deleteface->next;
+	//		}
+	//		deleteFace.push_back(deleteface);
+	//	}
+	//}
 
 // test
 	/*
@@ -290,6 +394,7 @@ mev 0 1 0 0
 mev 1 1 1 0
 mev 2 0 1 0
 mef 3 0 1
+
 mev 0 0.25 0.25 0
 mev 4 0.75 0.25 0
 mev 5 0.25 0.75 0
@@ -327,69 +432,8 @@ mef 11 8 0
 kemr 0 8
 
 sweep 0 0 1 0.5
-
-
-
 	*/
 
-	//Vertex* start,*now = new Vertex(0,0,0);
-	//Vertex* now1 = new Vertex(0, 0, 0), * now2 = new Vertex(0, 0, 0);
-	//double dir[3] = { 0,0,1 };
-	//solid = op.mvfs(arr1, start);
-	//vector<Vertex*>vec = op.getVertex_list();
-	//for (auto x : vec) {
-	//	if (x->id == 0) {
-	//		now = x;
-	//		break;
-	//	}
-	//}
-	//HalfEdge* he = op.mev(now, arr2, solid->faces->out_lp);
-	//vec = op.getVertex_list();
-	//for (auto x : vec) {
-	//	if (x->id == 1) {
-	//		now = x;
-	//		break;
-	//	}
-	//}
-	//HalfEdge* he2 = op.mev(now, arr7, solid->faces->out_lp);
-	//vec = op.getVertex_list();
-	//for (auto x : vec) {
-	//	if (x->id == 2) {
-	//		now = x;
-	//		break;
-	//	}
-	//}
-	//HalfEdge* he3 = op.mev(he2->endVertex, arr3, solid->faces->out_lp);
-	//vec = op.getVertex_list();
-	//for (auto x : vec) {
-	//	if (x->id == 0) {
-	//		now1 = x;
-	//		break;
-	//	}
-	//}
-	//for (auto x : vec) {
-	//	if (x->id == 3) {
-	//		now2 = x;
-	//		break;
-	//	}
-	//}
-
-	//op.mef(now1, now2, solid->faces->out_lp, 1);
-	//HalfEdge* he4 = op.mev(start, arr4, solid->faces->out_lp);
-	//HalfEdge* he6 = op.mev(he4->endVertex, arr5, solid->faces->out_lp);
-	//HalfEdge* he8 = op.mev(he6->endVertex, arr6, solid->faces->out_lp);
-	//op.mef(he8->endVertex, he4->endVertex, solid->faces->out_lp, 0);
-	//op.kemr(start, he4->endVertex, solid->faces->out_lp);
-	///*if (solid->faces->next->next->next == NULL) {
-	//	cout << "YEs" << endl;
-	//}*/
-	//op.sweep(dir, 0.5);
-	//
-	//op.kfmrh(solid->faces,solid->faces->next->next);
-	//
-	//faces = solid->faces;
-	//vec_S = op.getSweep_list();
-	//cout << vec_S.size() << endl; // 2
 }
 
 int main(int argc, char* argv[])
