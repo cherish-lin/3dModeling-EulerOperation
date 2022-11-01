@@ -1,11 +1,11 @@
 # 3dmodeling
 这是对该代码的介绍及使用方法
 
-HalfEdge.h
+HalfEdge.h:
 
 该程序构建了半边数据结构，包含点、半边、边、环、面、体六个基本体素，分别对应Vertex,HalfEdge,Edge,Loop,Face,Solid。
 
-EulerOperation.h/EulerOperation.cpp
+EulerOperation.h/EulerOperation.cpp:
 
 使用5个基本欧拉操作：
 
@@ -19,7 +19,7 @@ kemr:删除给定两个顶点之间相连的一条边，并且生成一个内环
 
 kfmrh:删除一个给定面，并且生成一个内环和一个通孔
 
-main.cpp
+main.cpp:
 
 该程序的功能是用户构造一个底面，可以包含多个内环，然后输入扫掠方向和扫掠长度，进行扫掠操作进而形成一个三维模型。
 
