@@ -42,7 +42,7 @@ HalfEdge* EulerOperator::mev(Vertex* sv, double point[3], Loop* loop)
 		HalfEdge* thalf = loop->halfedges;
 		while (thalf->endVertex != sv) {
 			thalf = thalf->next;
-			//cout << "begin:" << thalf->startVertex->id << ' ';
+			//cout << "begin:" << thalf->endVertex->id << ' ' << sv->id << "!!!" << endl;
 		}
 		//cout << "end" << endl;
 		half_r->next = thalf->next;
@@ -58,7 +58,7 @@ HalfEdge* EulerOperator::mev(Vertex* sv, double point[3], Loop* loop)
 	return half_l;
 }
 
-Loop* EulerOperator::mef(Vertex* sv, Vertex* ev, Loop* loop, bool mark)
+Face* EulerOperator::mef(Vertex* sv, Vertex* ev, Loop* loop, bool mark)
 {
 	Solid* solid = loop->face->solid;
 	Edge* edge = new Edge();
@@ -133,7 +133,7 @@ Loop* EulerOperator::mef(Vertex* sv, Vertex* ev, Loop* loop, bool mark)
 	//add edge into the edge list of solid
 	addEdgeIntoSolid(edge, solid);
 
-	return loop;
+	return face;
 }
 
 Solid* EulerOperator::mvfs(double point[3], Vertex*& vertex)
@@ -177,9 +177,11 @@ Loop* EulerOperator::kemr(Vertex* sv, Vertex* ev, Loop* loop)
 	while (hal->startVertex != sv || hal->endVertex != ev)hal = hal->next;
 	tmpa = hal;
 
-	while (hal->startVertex != ev || hal->endVertex != sv)hal = hal->next;
+	while (hal->startVertex != ev || hal->endVertex != sv) {
+		//cout << hal->startVertex->id << ' ' << hal->endVertex->id << endl;
+		hal = hal->next;
+	}
 	tmpb = hal;
-
 	tmpb->pre->next = tmpa->next;
 	tmpa->pre->next = tmpb->next;
 
@@ -261,7 +263,7 @@ void EulerOperator::sweep(double dir[3], double dist)
 			uphe = mev(nextv, point, lp);
 			upv = uphe->endVertex;
 
-			lp = mef(upprev, upv, loop, false);
+			mef(upprev, upv, loop, false);
 
 			upprev = upv;
 			he = he->next;
