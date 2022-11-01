@@ -19,7 +19,7 @@ public:
 	vector<Loop*> getLoop_list() { return l_list; }
 	// euler operation
 	HalfEdge* mev(Vertex* sv, double point[3], Loop* loop);
-	Loop* mef(Vertex* sv, Vertex* ev, Loop* loop, bool mark);
+	Face* mef(Vertex* sv, Vertex* ev, Loop* loop, bool mark);
 	Solid* mvfs(double point[3], Vertex*& vertex);
 	Loop* kemr(Vertex* sv, Vertex* ev, Loop* loop);
 	void kfmrh(Face* fa, Face* fb);
