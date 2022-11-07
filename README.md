@@ -110,5 +110,5 @@ main.cpp:
 0 0 -1 0.5
 
 结果
-https://github.com/cherish-lin/3dModeling-EulerOperation/blob/98923496cd655f7ebfc11225ab6a997023d93ea9/model2.png
+
 
