@@ -37,13 +37,14 @@ void Display()
 	double increment = 0.1;
 	double r = 0.0;
 	while (t != NULL) {
-		cout << "this face->id:" << t->id << endl;
+		//cout << "this face->id:" << t->id << endl;
 		GLUtesselator* tess = gluNewTess();
 		gluTessCallback(tess, GLU_TESS_VERTEX, (void (CALLBACK*)())PolyLine3DVertex);
 		gluTessCallback(tess, GLU_TESS_BEGIN, (void (CALLBACK*)())PolyLine3DBegin);
 		gluTessCallback(tess, GLU_TESS_END, (void (CALLBACK*)())PolyLine3DEnd);
 		r += increment;
-		glColor3d(r, 0.5, 0.8);//在此设置颜色  
+		if (r > 1.0)r = 1.0;
+		glColor3d(r, 0.4, 0.7);//在此设置颜色  
 		gluTessBeginPolygon(tess, NULL);
 
 		Loop* out_lp = t->out_lp;
@@ -54,17 +55,17 @@ void Display()
 		while (he1->endVertex != start) {
 			
 			gluTessVertex(tess, he1->startVertex->positions, he1->startVertex->positions);
-			for (int i = 0; i < 3; i++) {
+			/*for (int i = 0; i < 3; i++) {
 				cout << he1->startVertex->positions[i] << ' ';
 			}
-			cout << endl;
+			cout << endl;*/
 			he1 = he1->next;
 		}
-		for (int i = 0; i < 3; i++) {
+		/*for (int i = 0; i < 3; i++) {
 			cout << he1->startVertex->positions[i] << ' ';
 		}
 		cout << endl;
-		cout << "---------------" << endl;
+		cout << "---------------" << endl;*/
 		
 		gluTessVertex(tess, he1->startVertex->positions, he1->startVertex->positions);
 		gluTessEndContour(tess);
@@ -72,24 +73,24 @@ void Display()
 
 
 		while (in_lp != NULL) {
-			cout << "this has a in_lp " << endl;
+			//cout << "this has a in_lp " << endl;
 			HalfEdge* he2 = in_lp->halfedges;
 			Vertex* start2 = he2->startVertex;
 			gluTessBeginContour(tess);
 			while (he2->endVertex != start2) {
 
 				gluTessVertex(tess, he2->startVertex->positions, he2->startVertex->positions);
-				for (int i = 0; i < 3; i++) {
+				/*for (int i = 0; i < 3; i++) {
 					cout << he2->startVertex->positions[i] << ' ';
 				}
-				cout << endl;
+				cout << endl;*/
 				he2 = he2->next;
 			}
-			for (int i = 0; i < 3; i++) {
+			/*for (int i = 0; i < 3; i++) {
 				cout << he2->startVertex->positions[i] << ' ';
 			}
 			cout << endl;
-			cout << "---------------" << endl;
+			cout << "---------------" << endl;*/
 
 			gluTessVertex(tess, he2->startVertex->positions, he2->startVertex->positions);
 			gluTessEndContour(tess);
@@ -126,7 +127,7 @@ void myKeyboard(unsigned char key, int x, int y) {//键盘控制函数，控制�
 		else phi = -179;
 		break;
 	case'S':
-	case's':
+	case's': //这里只能上下反转180度
 		if (theta + 1 < 180)
 			theta = theta + 1;
 		break;
@@ -139,28 +140,10 @@ void myKeyboard(unsigned char key, int x, int y) {//键盘控制函数，控制�
 	glutPostRedisplay();
 }
 
-
 vector<Vertex*>vec_V;
 vector<Loop*>vec_L;
 vector<Face*>vec_S;
 void TestEuler() {
-	/*double arr[3] = { 0,0,0 };
-	double arr1[3] = { 0,0,0 };
-	double arr2[3] = { 200,0,0 };
-	double arr3[3] = { 0,200,0 };
-	double arr4[3] = { 50,50,0 };
-	double arr5[3] = { 100,50,0 };
-	double arr6[3] = { 50,100,0 };
-	double arr7[3] = { 200,200,0 };
-	for (int i = 0; i < 3; i++) {
-		arr1[i] /= 400;
-		arr2[i] /= 400;
-		arr3[i] /= 400;
-		arr4[i] /= 400;
-		arr5[i] /= 400;
-		arr6[i] /= 400;
-		arr7[i] /= 400;
-	}*/
 	EulerOperator op;
 	double arr[3];
 	vector<Face*>deleteFace;
@@ -175,8 +158,12 @@ void TestEuler() {
 			cout << "请输入扫掠轴的方向以及扫掠长度" << endl;
 			double dist;
 			for (int i = 0; i < 3; i++)cin >> arr[i];
+			double mon = sqrt(arr[0] * arr[0] + arr[1] * arr[1] + arr[2] * arr[2]);
+			for (int i = 0; i < 3; i++) arr[i] /= mon; //将扫掠方向单位化
+
 			cin >> dist;
 			op.sweep(arr, dist);
+			//对多余的面采用kfmrh操作，生成内环
 			for (auto deleteface : deleteFace) {
 				op.kfmrh(solid->faces,deleteface);
 			}
@@ -189,15 +176,15 @@ void TestEuler() {
 					cin >> arr[j];
 				}
 				if (i == 0) {
-					solid = op.mvfs(arr, startvertex);
+					solid = op.mvfs(arr, startvertex); //构建模型的第一部操作
 					now = startvertex;
 				}
 				else {
-					HalfEdge *he = op.mev(now, arr, solid->faces->out_lp);
+					HalfEdge *he = op.mev(now, arr, solid->faces->out_lp); //对外环的每一个点，依次进行mev操作
 					now = he->endVertex;
 				}
 			}
-			op.mef(now, startvertex, solid->faces->out_lp, true);
+			op.mef(now, startvertex, solid->faces->out_lp, true); //将最后一个点与第一个点相连，形成一个新面
 
 			flag = false;
 		}
@@ -220,7 +207,7 @@ void TestEuler() {
 			}
 			Face* deleteface = op.mef(now, firstvertex, solid->faces->out_lp, false);
 			//cout << startvertex->id << ' ' << firstvertex->id << endl;
-			op.kemr(startvertex, firstvertex, solid->faces->out_lp);
+			op.kemr(startvertex, firstvertex, solid->faces->out_lp); //运用kemr操作来生成内环
 
 			// 存储多余的面，待扫掠操作完成后进行kfmrh操作来完成模型的构建
 			/*Face* deleteface = solid->faces->next;
@@ -231,6 +218,7 @@ void TestEuler() {
 		}
 	}
 /*
+triangle with a triangle hole 
 3
 -0.5 -0.5 0
 0.5 -0.5 0
@@ -272,168 +260,7 @@ void TestEuler() {
 0
 0 0 -1 0.5
 */
-	//while (1) {
-	//	//if (solid!= NULL) {
-
-	//	//	Face* now = solid->faces;
-	//	//	cout << "现在有" << now->inum << "个内环" << endl;
-	//	//	/*if (now->inner_lp) {
-	//	//		Loop* lp = now->inner_lp;
-	//	//		cout << now->id << ' ' << lp->id << "id" << endl;
-	//	//		
-	//	//	}*/
-	//	//}
-	//	cout << "请输入欧拉操作及对应的参数:" << endl;
-	//	string str; cin >> str;
-	//	if (str == "sweep") {
-	//		for (int i = 0; i < 3; i++)cin >> arr[i];//扫掠的方向
-	//		//for (int i = 0; i < 3; i++)arr[i] /= 2;
-	//		double dist = 1;//延扫掠方向扫掠的距离
-	//		cin >> dist;
-	//		
-	//		op.sweep(arr, dist);
-	//		//调用kfmrh，完成模型的构造
-	//		for (auto deleteface : deleteFace) {
-	//			op.kfmrh(solid->faces,deleteface);
-	//		}
-	//		//if (solid != NULL) {
-
-	//		//	Face* now = solid->faces;
-	//		//	cout << "现在有" << now->inum << "个内环" << endl;
-	//		//	/*if (now->inner_lp) {
-	//		//		Loop* lp = now->inner_lp;
-	//		//		cout << now->id << ' ' << lp->id << "id" << endl;
-
-	//		//	}*/
-	//		//}
-	//		break;
-	//	}
-	//	else if (str == "mvfs") {
-	//		for (int i = 0; i < 3; i++)cin >> arr[i]; //输入初始顶点的位置
-	//		for (int i = 0; i < 3; i++)arr[i] /= 2;
-	//		Vertex* start;
-	//		solid = op.mvfs(arr, start);
-	//	}
-	//	else if (str == "mev") {
-	//		int u; cin >> u;//旧顶点的编号
-	//		for (int i = 0; i < 3; i++)cin >> arr[i]; //新顶点的位置，与给定顶点进行相连，形成一条边
-	//		for (int i = 0; i < 3; i++)arr[i] /= 2;
-	//		Vertex* start = new Vertex(0,0,0);
-	//		vector<Vertex*>vec = op.getVertex_list();
-	//		for (auto x : vec) {
-	//			if (x->id == u) {
-	//				start = x;
-	//				break;
-	//			}
-	//		}
-	//		//cout << "end";
-	//		op.mev(start, arr, solid->faces->out_lp);
-	//	}
-	//	else if (str == "mef") { //连接两个编号为u和v的顶点,flag代表新生成的面参不参与扫掠操作？？
-	//		Vertex* start = new Vertex(0, 0, 0), * end = new Vertex(0, 0, 0);
-	//		int u, v, flag; cin >> u >> v >> flag;
-	//		vector<Vertex*>vec = op.getVertex_list();
-	//		for (auto x : vec) {
-	//			if (x->id == u) {
-	//				start = x;
-	//				break;
-	//			}
-	//		}
-	//		for (auto x : vec) {
-	//			if (x->id == v) {
-	//				end = x;
-	//				break;
-	//			}
-	//		}
-	//		op.mef(start, end, solid->faces->out_lp, flag);
-	//	}
-	//	else if (str == "kemr") { //删除给定两个顶点相连的边，构造一个内环
-	//		int u, v; cin >> u >> v;
-	//		vector<Vertex*>vec = op.getVertex_list();
-	//		Vertex* start = new Vertex(0, 0, 0), * end = new Vertex(0, 0, 0);
-	//		for (auto x : vec) {
-	//			if (x->id == u) {
-	//				start = x;
-	//				break;
-	//			}
-	//		}
-	//		for (auto x : vec) {
-	//			if (x->id == v) {
-	//				end = x;
-	//				break;
-	//			}
-	//		}
-	//		op.kemr(start, end, solid->faces->out_lp);
-	//		Face* deleteface = solid->faces->next;
-	//		while (deleteface->next != NULL) {
-	//			deleteface = deleteface->next;
-	//		}
-	//		deleteFace.push_back(deleteface);
-	//	}
-	//}
-
-// test
-	/*
-mvfs 0 0 0
-mev 0 1 0 0
-mev 1 1 1 0
-mev 2 0 1 0
-mef 3 0 1
-mev 0 0.25 0.25 0
-mev 4 0.75 0.25 0
-mev 5 0.25 0.75 0
-mef 6 4 0
-kemr 0 4
-sweep 0 0 1 0.5
-
-
-
-// two hole
-mvfs 0 0 0
-mev 0 1 0 0
-mev 1 1 1 0
-mev 2 0 1 0
-mef 3 0 1
-
-mev 0 0.25 0.25 0
-mev 4 0.75 0.25 0
-mev 5 0.25 0.75 0
-mef 6 4 0
-kemr 0 4
-
-mev 0 0.9 0.9 0
-mev 7 0.7 0.9 0
-mev 8 0.9 0.7 0
-mef 9 7 0
-kemr 0 7
-
-sweep 0 0 1 0.5
-
-
-// two quad holes
-mvfs 0 0 0
-mev 0 1 0 0
-mev 1 1 1 0
-mev 2 0 1 0
-mef 3 0 1
-
-mev 0 0.25 0.25 0
-mev 4 0.5 0.25 0
-mev 5 0.5 0.5 0
-mev 6 0.25 0.5 0
-mef 7 4 0
-kemr 0 4
-
-mev 0 0.9 0.9 0
-mev 8 0.7 0.9 0
-mev 9 0.7 0.7 0
-mev 10 0.9 0.7 0
-mef 11 8 0
-kemr 0 8
-
-sweep 0 0 1 0.5
-	*/
-
+	
 }
 
 int main(int argc, char* argv[])
@@ -459,6 +286,7 @@ int main(int argc, char* argv[])
 	glLoadIdentity();
 	glOrtho(-1, 1, -1, 1, -1, 5);
 	//glOrtho(0, 640, 0, 480, 0, 400);
+	//cout << r * sin(theta * 3.14159 / 180) * sin(phi * 3.14159 / 180) << ' ' << r * cos(theta * 3.14159 / 180) << ' ' << r * sin(theta * 3.14159 / 180) * cos(phi * 3.14159 / 180) << endl;
 	gluLookAt(r * sin(theta * 3.14159 / 180) * sin(phi * 3.14159 / 180), r * cos(theta * 3.14159 / 180), r * sin(theta * 3.14159 / 180) * cos(phi * 3.14159 / 180),
 		0, 0, 0, 
 		0, 1, 0);
